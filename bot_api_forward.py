@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 load_dotenv()
 from telethon.sessions import StringSession
 
-import json, asyncio, pytz, tzlocal
+import os, json, asyncio, pytz, tzlocal
 from telegram import constants, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
