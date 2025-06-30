@@ -9,8 +9,8 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 # ─── Telethon client setup ───────────────────────────────────────────────────
 from telethon import TelegramClient
 
-API_ID   = int(os.getenv("TELETHON_API_ID", 0))
-API_HASH = os.getenv("TELETHON_API_HASH", "")
+API_ID   = int(os.getenv("API_ID", 0))
+API_HASH = os.getenv("API_HASH", "")
 # session name 'forwardbot.session' will be created locally
 TCLIENT = TelegramClient('forwardbot.session', API_ID, API_HASH)
 # start Telethon sync before polling
