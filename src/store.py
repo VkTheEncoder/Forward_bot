@@ -1,9 +1,10 @@
 # src/store.py
+
 import os
 import json
-from logger import logger    # ← make sure you’ve got logger available
+from logger import logger
 
-# Default template
+# Default settings template
 _defaults = {
     "src_channel": None,
     "dst_channel": None,
@@ -11,15 +12,14 @@ _defaults = {
     "to_id":      None
 }
 
-# Compute the file path
+# Path one level above this file
 SETTINGS_FILE = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "settings.json")
 )
-
 logger.info(f"[store] SETTINGS_FILE = {SETTINGS_FILE}")
 
 def load_settings():
-    logger.info(f"[store] load_settings() called")
+    logger.info("[store] load_settings() called")
     if not os.path.exists(SETTINGS_FILE):
         logger.info("[store] settings.json not found, writing defaults")
         save_settings(_defaults)
@@ -33,9 +33,10 @@ def load_settings():
             logger.warning("[store] JSON decode error, resetting to defaults")
             data = {}
 
-    # Ensure all keys
+    # Ensure all keys exist
     for k, v in _defaults.items():
         data.setdefault(k, v)
+
     logger.info(f"[store] returning merged data = {data}")
     return data
 
