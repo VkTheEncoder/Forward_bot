@@ -6,6 +6,15 @@ import os, json, asyncio, pytz, tzlocal
 from telegram import constants, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
+import logging
+from telethon.errors import FloodWaitError
+from telegram.error import RetryAfter
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s"
+)
+
 # ─── Telethon client setup ───────────────────────────────────────────────────
 from telethon import TelegramClient
 
@@ -158,26 +167,60 @@ async def forward_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🚀 Processing 0/{total}, forwarded 0"
     )
 
-    for mid in range(frm, to+1):
+   for mid in range(frm, to+1):
         done += 1
 
+        # 1) back off every 10 messages
+        if done % 10 == 0:
+            await asyncio.sleep(5)
+
+        # 2) update status asap
+        await status.edit_text(f"🚀 Processed {done}/{total}, forwarded {good}")
+
+        # 3) small throttle
+        await asyncio.sleep(0.1)
+
         try:
-            # always copy, no filtering
+            # 4) fetch via Telethon (always as list)
+            orig_list = await TCLIENT.get_messages(s["src_channel"], ids=[mid])
+            orig = orig_list[0] if orig_list else None
+
+            # 5) skip if not a document/video/animation/video_note
+            if not (
+                orig
+                and (
+                    orig.document
+                    or orig.video
+                    or getattr(orig, "animation", None)
+                    or getattr(orig, "video_note", None)
+                )
+            ):
+                logging.info(f"Skipping ID {mid}: no supported media")
+                continue
+
+            # 6) copy without the “Forwarded from…” banner
             await context.bot.copy_message(
                 chat_id      = s["dst_channel"],
                 from_chat_id = s["src_channel"],
                 message_id   = mid,
             )
             good += 1
-        except Exception:
-            # skip missing IDs or permission errors
+
+        except FloodWaitError as e:
+            logging.warning(f"Telethon FloodWait: sleeping {e.seconds}s at ID {mid}")
+            await asyncio.sleep(e.seconds + 1)
+            done -= 1  # retry this ID
             continue
 
-        # pacing (same as before)
-        if done % 10 == 0:
-            await asyncio.sleep(5)
-        await status.edit_text(f"🚀 Processed {done}/{total}, forwarded {good}")
-        await asyncio.sleep(0.1)
+        except RetryAfter as e:
+            logging.warning(f"Bot API RateLimit: sleeping {e.retry_after}s at ID {mid}")
+            await asyncio.sleep(e.retry_after + 1)
+            done -= 1
+            continue
+
+        except Exception as e:
+            logging.error(f"Error on ID {mid}: {e!r}")
+            continue
 
     await status.edit_text(f"✅ Done! Processed {done}, forwarded {good} doc/video(s).")
 
