@@ -161,26 +161,23 @@ async def forward_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for mid in range(frm, to+1):
         done += 1
 
-for mid in range(frm, to+1):
-    done += 1
+        try:
+            # always copy, no filtering
+            await context.bot.copy_message(
+                chat_id      = s["dst_channel"],
+                from_chat_id = s["src_channel"],
+                message_id   = mid,
+            )
+            good += 1
+        except Exception:
+            # skip missing IDs or permission errors
+            continue
 
-    try:
-        # always copy, no filtering
-        await context.bot.copy_message(
-            chat_id      = s["dst_channel"],
-            from_chat_id = s["src_channel"],
-            message_id   = mid,
-        )
-        good += 1
-    except Exception:
-        # skip missing IDs or permission errors
-        continue
-
-    # pacing (same as before)
-    if done % 10 == 0:
-        await asyncio.sleep(5)
-    await status.edit_text(f"🚀 Processed {done}/{total}, forwarded {good}")
-    await asyncio.sleep(0.1)
+        # pacing (same as before)
+        if done % 10 == 0:
+            await asyncio.sleep(5)
+        await status.edit_text(f"🚀 Processed {done}/{total}, forwarded {good}")
+        await asyncio.sleep(0.1)
 
     await status.edit_text(f"✅ Done! Processed {done}, forwarded {good} doc/video(s).")
 
