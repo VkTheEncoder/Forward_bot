@@ -1,23 +1,30 @@
-import os, json
+import os
+import json
 
-# Will live next to the project root\SETTINGS_FILE = os.path.join(os.path.dirname(__file__), '..', 'settings.json')
-DEFAULTS = {
+# Define the path to settings.json next to the project root
+defaults = {
     "src_channel": None,
     "dst_channel": None,
     "from_id": None,
     "to_id": None
 }
 
+# Compute SETTINGS_FILE relative to this file's parent directory
+SETTINGS_FILE = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '..', 'settings.json')
+)
+
 def load_settings():
     if not os.path.exists(SETTINGS_FILE):
-        save_settings(DEFAULTS)
-        return DEFAULTS.copy()
+        save_settings(defaults)
+        return defaults.copy()
     with open(SETTINGS_FILE, 'r') as f:
         try:
             data = json.load(f)
         except json.JSONDecodeError:
             data = {}
-    for k, v in DEFAULTS.items():
+    # Ensure all keys exist
+    for k, v in defaults.items():
         data.setdefault(k, v)
     return data
 
