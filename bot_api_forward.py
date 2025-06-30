@@ -63,7 +63,7 @@ async def settings_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "<b>Your Settings</b>\n"
         f"• Source chat_id: <code>{s['src_channel']}</code>\n"
         f"• Destination chat_id: <code>{s['dst_channel']}</code>\n"
-        f"• Range: <code>{s['from_id']} → {s['to_id']}</code>"
+        f"• Range: <code>{s['from_id']} → {s['to_id']}</code>\n"
         f" Usage :- Use /setsrc, /setdst, /setrange to update.",
         parse_mode=constants.ParseMode.HTML
     )
