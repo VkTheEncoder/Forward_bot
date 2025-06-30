@@ -80,7 +80,6 @@ async def check_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("✅ All settings are configured correctly.")
 
-# Register command handlers
 app.add_handler(CommandHandler("setsrc", set_src))
 app.add_handler(CommandHandler("setdst", set_dst))
 app.add_handler(CommandHandler("setfrom", set_from))
@@ -103,15 +102,18 @@ async def forward_event(event):
 
 # ─── Main entrypoint to run both clients concurrently ─────────────────────
 async def main():
-    # Start both clients
+    # Start Telethon
     await TCLIENT.start(bot_token=BOT_TOKEN)
-    await app.initialize()
-    await app.start()
 
-    # Run until disconnected or stopped
+    # Initialize and start Telegram Bot polling
+    await app.initialize()
+    # Start polling using Updater
+    await app.updater.start_polling()
+
+    # Keep both clients running
     await asyncio.gather(
         TCLIENT.run_until_disconnected(),
-        app.idle()
+        app.updater.idle()
     )
 
 if __name__ == "__main__":
