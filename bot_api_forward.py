@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 from dotenv import load_dotenv
 load_dotenv()
-from telethon.sessions import StringSession
 
 import os, json, asyncio, pytz, tzlocal
 from telegram import constants, Update
@@ -29,16 +28,10 @@ from telethon import TelegramClient
 T_API_ID   = int(os.getenv("API_ID", 0))
 T_API_HASH = os.getenv("API_HASH", "")
 
-# Create (or reuse) a session file called “filter.session”
+# Let Telethon store its own "filter.session" file.
+# On first run this will prompt you for phone+code; after that it's silent.
 TCLIENT = TelegramClient("filter", T_API_ID, T_API_HASH)
-# Connect using the existing session, no prompts
-asyncio.get_event_loop().run_until_complete(TCLIENT.connect())
-
-# ─── EDIT: load your saved session instead of interactive login ───────────────
-SESSION = os.getenv("STRING_SESSION", "")
-if not SESSION:
-    raise RuntimeError("Missing STRING_SESSION in .env – run gen_session.py once")
-# ───────────────────────────────────────────────────────────────────────────────
+asyncio.get_event_loop().run_until_complete(TCLIENT.start())
 
 def load_all_settings():
     if not os.path.exists(SETTINGS_FILE):
