@@ -140,7 +140,6 @@ def main():
         return
     app = ApplicationBuilder() \
         .token(token) \
-        .timezone(pytz.UTC) \
         .build()
     app.add_handler(CommandHandler("start",    start))
     app.add_handler(CommandHandler("settings", settings_cmd))
