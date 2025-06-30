@@ -67,10 +67,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "4️⃣ <code>/forward</code>\n"
         "   • I’ll process every ID in your range, copy only documents & videos, and skip everything else.\n\n"
         "<b>Example</b>:\n"
-        "<code>/setsrc -1276473254378</code>  – set your source channel\n"
-        "<code>/setdst -78124723t4237</code>  – set your destination channel\n"
-        "<code>/setrange 50 150</code>        – forward messages 50 through 150\n"
-        "<code>/forward</code>                – start copying docs/videos\n\n"
+        "<code>/setsrc -1276473254378</code>  \n"
+        "<code>/setdst -78124723t4237</code>  \n"
+        "<code>/setrange 50 150</code>        \n"
+        "<code>/forward</code>                \n\n"
         "⚙️ Need to check your settings? Use <code>/settings</code>\n"
         "<b>❓ Contact @THe_vK_3 if any problem or Query</b>",
         parse_mode=constants.ParseMode.HTML
