@@ -12,7 +12,7 @@ from telethon import TelegramClient, events
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-# ─── Monkey‑patch tzlocal to use UTC ─────────────────────────────────────────
+# ─── Monkey-patch tzlocal to use UTC ─────────────────────────────────────────
 tzlocal.get_localzone = lambda: pytz.UTC
 
 # ─── Environment & Config ──────────────────────────────────────────────────
@@ -27,10 +27,9 @@ def load_all_settings():
     if os.path.exists(SETTINGS_FILE):
         with open(SETTINGS_FILE, "r") as f:
             return json.load(f)
-    empty = {}
     with open(SETTINGS_FILE, "w") as f:
-        json.dump(empty, f)
-    return empty
+        json.dump({}, f)
+    return {}
 
 def save_all_settings(settings):
     with open(SETTINGS_FILE, "w") as f:
@@ -42,79 +41,74 @@ all_settings = load_all_settings()
 TCLIENT = TelegramClient("filter", T_API_ID, T_API_HASH)
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-# ─── Telegram‑Bot Command Handlers ─────────────────────────────────────────
+# ─── Command Handlers ──────────────────────────────────────────────────────
 async def set_src(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = str(update.effective_chat.id)
-    cfg = all_settings.setdefault(chat_id, {})
+    cid = str(update.effective_chat.id)
+    cfg = all_settings.setdefault(cid, {})
     cfg["src_channel"] = int(context.args[0])
     save_all_settings(all_settings)
     await update.message.reply_text(f"✅ Source channel set to {cfg['src_channel']}")
 
 async def set_dst(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = str(update.effective_chat.id)
-    cfg = all_settings.setdefault(chat_id, {})
+    cid = str(update.effective_chat.id)
+    cfg = all_settings.setdefault(cid, {})
     cfg["dst_channel"] = int(context.args[0])
     save_all_settings(all_settings)
     await update.message.reply_text(f"✅ Destination channel set to {cfg['dst_channel']}")
 
 async def set_from(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = str(update.effective_chat.id)
-    cfg = all_settings.setdefault(chat_id, {})
+    cid = str(update.effective_chat.id)
+    cfg = all_settings.setdefault(cid, {})
     cfg["from_id"] = int(context.args[0])
     save_all_settings(all_settings)
-    await update.message.reply_text(f"✅ Forward‑from user set to {cfg['from_id']}")
+    await update.message.reply_text(f"✅ Forward-from user set to {cfg['from_id']}")
 
 async def set_to(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = str(update.effective_chat.id)
-    cfg = all_settings.setdefault(chat_id, {})
+    cid = str(update.effective_chat.id)
+    cfg = all_settings.setdefault(cid, {})
     cfg["to_id"] = int(context.args[0])
     save_all_settings(all_settings)
-    await update.message.reply_text(f"✅ Forward‑to user set to {cfg['to_id']}")
+    await update.message.reply_text(f"✅ Forward-to user set to {cfg['to_id']}")
 
 async def check_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = str(update.effective_chat.id)
-    cfg = all_settings.get(chat_id, {})
-    missing = [k for k in ("src_channel","dst_channel","from_id","to_id") if cfg.get(k) is None]
+    cid = str(update.effective_chat.id)
+    cfg = all_settings.get(cid, {})
+    missing = [k for k in ("src_channel", "dst_channel", "from_id", "to_id") if cfg.get(k) is None]
     if missing:
-        await update.message.reply_text(f"⚠️ Missing settings: {', '.join(missing)}")
+        await update.message.reply_text(f"⚠️ Missing: {', '.join(missing)}")
     else:
-        await update.message.reply_text("✅ All settings are configured correctly.")
+        await update.message.reply_text("✅ All settings configured.")
 
-app.add_handler(CommandHandler("setsrc", set_src))
-app.add_handler(CommandHandler("setdst", set_dst))
-app.add_handler(CommandHandler("setfrom", set_from))
-app.add_handler(CommandHandler("setto", set_to))
-app.add_handler(CommandHandler("checksettings", check_settings))
+for cmd, handler in (
+    ("setsrc", set_src), ("setdst", set_dst),
+    ("setfrom", set_from), ("setto", set_to),
+    ("checksettings", check_settings),
+):
+    app.add_handler(CommandHandler(cmd, handler))
 
-# ─── Telethon Event Handler for Forwarding ─────────────────────────────────
+# ─── Forwarding Logic ───────────────────────────────────────────────────────
 @TCLIENT.on(events.NewMessage)
 async def forward_event(event):
-    for chat_id, cfg in all_settings.items():
-        if (
-            event.chat_id == cfg.get("src_channel") and
-            event.sender_id == cfg.get("from_id")
-        ):
-            await TCLIENT.send_message(
-                cfg.get("dst_channel"),
-                event.message
-            )
+    for cid, cfg in all_settings.items():
+        if event.chat_id == cfg.get("src_channel") and event.sender_id == cfg.get("from_id"):
+            await TCLIENT.send_message(cfg.get("dst_channel"), event.message)
             break
 
-# ─── Main entrypoint to run both clients concurrently ─────────────────────
+# ─── Main Entrypoint ───────────────────────────────────────────────────────
 async def main():
-    # Start Telethon
+    # Start both clients
     await TCLIENT.start(bot_token=BOT_TOKEN)
 
-    # Initialize and start Telegram Bot polling
-    await app.initialize()
-    # Start polling using Updater
-    await app.updater.start_polling()
-
-    # Keep both clients running
-    await asyncio.gather(
-        TCLIENT.run_until_disconnected(),
-        app.updater.idle()
+    # Launch PTB polling as a background task
+    polling = asyncio.create_task(
+        app.run_polling(close_loop=False)
     )
+
+    # Keep Telethon running
+    await TCLIENT.run_until_disconnected()
+
+    # If Telethon disconnects, cancel polling
+    polling.cancel()
 
 if __name__ == "__main__":
     asyncio.run(main())
