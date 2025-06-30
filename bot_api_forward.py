@@ -143,7 +143,7 @@ async def forward_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         done += 1
         try:
             # forward unconditionally
-            fwd = await context.bot.forward_message(
+            fwd = await context.bot.copy_message(
                 chat_id=s["dst_channel"],
                 from_chat_id=s["src_channel"],
                 message_id=mid
