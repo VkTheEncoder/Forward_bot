@@ -29,10 +29,10 @@ from telethon import TelegramClient
 T_API_ID   = int(os.getenv("API_ID", 0))
 T_API_HASH = os.getenv("API_HASH", "")
 
-# Create a Telethon client using your StringSession (no prompts)
-TCLIENT = TelegramClient(StringSession(SESSION), T_API_ID, T_API_HASH)
-# Only connect (reuse the stored session), don’t prompt
-asyncio.get_event_loop().run_until_complete(TCLIENT.connect())
+# Create (or reuse) a session file called “filter.session”
+TCLIENT = TelegramClient("filter", T_API_ID, T_API_HASH)
+# On first run this will ask you for phone & code; after that it’s silent.
+asyncio.get_event_loop().run_until_complete(TCLIENT.start())
 
 # ─── EDIT: load your saved session instead of interactive login ───────────────
 SESSION = os.getenv("STRING_SESSION", "")
