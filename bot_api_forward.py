@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 from dotenv import load_dotenv
 load_dotenv()
+from telethon.sessions import StringSession
 
-import os, json, asyncio, pytz, tzlocal
+import json, asyncio, pytz, tzlocal
 from telegram import constants, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
@@ -28,10 +29,15 @@ from telethon import TelegramClient
 T_API_ID   = int(os.getenv("API_ID", 0))
 T_API_HASH = os.getenv("API_HASH", "")
 
-# Create a Telethon client for “peeking” at the original message
-TCLIENT = TelegramClient("filter", T_API_ID, T_API_HASH)
-# Synchronously start it before the bot polls
-asyncio.get_event_loop().run_until_complete(TCLIENT.start())
+# Create a Telethon client using your StringSession (no prompts)
+TCLIENT = TelegramClient(StringSession(SESSION), T_API_ID, T_API_HASH)
+# Only connect (reuse the stored session), don’t prompt
+asyncio.get_event_loop().run_until_complete(TCLIENT.connect())
+
+# ─── EDIT: load your saved session instead of interactive login ───────────────
+SESSION = os.getenv("STRING_SESSION", "")
+if not SESSION:
+    raise RuntimeError("Missing STRING_SESSION in .env – run gen_session.py once")
 # ───────────────────────────────────────────────────────────────────────────────
 
 def load_all_settings():
