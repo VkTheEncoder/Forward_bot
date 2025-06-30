@@ -20,6 +20,20 @@ USER_DEFAULTS = {
     "to_id":      None,     # integer
 }
 
+# ─── EDIT: Telethon imports & setup ────────────────────────────────────────────
+import os
+from telethon import TelegramClient
+
+# Pull in your user-session creds from .env
+T_API_ID   = int(os.getenv("API_ID", 0))
+T_API_HASH = os.getenv("API_HASH", "")
+
+# Create a Telethon client for “peeking” at the original message
+TCLIENT = TelegramClient("filter", T_API_ID, T_API_HASH)
+# Synchronously start it before the bot polls
+asyncio.get_event_loop().run_until_complete(TCLIENT.start())
+# ───────────────────────────────────────────────────────────────────────────────
+
 def load_all_settings():
     if not os.path.exists(SETTINGS_FILE):
         with open(SETTINGS_FILE, "w") as f:
@@ -142,26 +156,27 @@ async def forward_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     for mid in range(frm, to+1):
         done += 1
+        # ─── EDIT: first fetch the original via Telethon ────────────────────
         try:
-            # COPY instead of forward → no "Forwarded from" header
-            fwd = await context.bot.copy_message(
-                chat_id=s["dst_channel"],
-                from_chat_id=s["src_channel"],
-                message_id=mid
+            orig = await TCLIENT.get_messages(
+                s["src_channel"], ids=mid
             )
-        except Exception:
-            # skip missing msg or lack of permission
-            continue
+            msg = orig[0] if orig else None
+        except:
+            msg = None
 
-        # check if it’s a doc or video
-        if (fwd.document is not None) or (fwd.video is not None):
-            good += 1
-        else:
-            # delete any unwanted forward
-            await context.bot.delete_message(
-                chat_id=s["dst_channel"],
-                message_id=fwd.message_id
-            )
+        # only copy if it really is a document or video
+        if msg and (msg.document or msg.video):
+            try:
+                await context.bot.copy_message(
+                    chat_id=s["dst_channel"],
+                    from_chat_id=s["src_channel"],
+                    message_id=mid
+                )
+                good += 1
+            except:
+                pass
+        # else: skip entirely, no need to delete
 
         # update status every 5 or at end
         if done % 5 == 0 or done == total:
