@@ -2,7 +2,7 @@
 from dotenv import load_dotenv
 load_dotenv()
 
-import os, json, asyncio, pytz, tzlocal
+import od, json, asyncio, pytz, tzlocal
 from telegram import constants, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
@@ -21,17 +21,25 @@ USER_DEFAULTS = {
 }
 
 # ─── EDIT: Telethon imports & setup ────────────────────────────────────────────
-import os
+# ─── EDIT: Telethon imports & setup (Bot mode) ────────────────────────────────
 from telethon import TelegramClient
 
-# Pull in your user-session creds from .env
+# Pull in your bot creds from .env
 T_API_ID   = int(os.getenv("API_ID", 0))
 T_API_HASH = os.getenv("API_HASH", "")
+BOT_TOKEN  = os.getenv("BOT_TOKEN", "")
 
-# Let Telethon store its own "filter.session" file.
-# On first run this will prompt you for phone+code; after that it's silent.
+if not BOT_TOKEN:
+    raise RuntimeError("Error: BOT_TOKEN not set in .env")
+
+# Instantiate the client ...
 TCLIENT = TelegramClient("filter", T_API_ID, T_API_HASH)
-asyncio.get_event_loop().run_until_complete(TCLIENT.start())
+
+# ... and start it in bot mode. No phone/code prompt ever.
+asyncio.get_event_loop().run_until_complete(
+    TCLIENT.start(bot_token=BOT_TOKEN)
+)
+
 
 def load_all_settings():
     if not os.path.exists(SETTINGS_FILE):
