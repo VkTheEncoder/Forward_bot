@@ -180,23 +180,22 @@ async def forward_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # 3) small throttle
         await asyncio.sleep(0.1)
 
-        try:
-            # 4) fetch via Telethon (always as list)
-            orig_list = await TCLIENT.get_messages(s["src_channel"], ids=[mid])
-            orig = orig_list[0] if orig_list else None
+        # 4) fetch via Telethon
+        orig_list = await TCLIENT.get_messages(s["src_channel"], ids=[mid])
+        orig = orig_list[0] if orig_list else None
 
-            # 5) skip if not a document/video/animation/video_note
-            if not (
-                orig
-                and (
-                    orig.document
-                    or orig.video
-                    or getattr(orig, "animation", None)
-                    or getattr(orig, "video_note", None)
-                )
-            ):
-                logging.info(f"Skipping ID {mid}: no supported media")
-                continue
+        # 5) skip if not a document/video/animation/video_note
+        if not (
+            orig
+            and (
+                orig.document
+                or orig.video
+                or getattr(orig, "animation", None)
+                or getattr(orig, "video_note", None)
+            )
+        ):
+            logging.info(f"Skipping ID {mid}: no supported media")
+            continue
 
         # 6) attempt copy, retrying on rate-limit until success or fatal error
         while True:
@@ -210,25 +209,17 @@ async def forward_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 break
 
             except RetryAfter as e:
-                # Telegram tells us exactly how long to wait
-                logging.warning(f"Bot API RateLimit on ID {mid}, sleeping {e.retry_after}s")
-                await asyncio.sleep(e.retry_after + 1)
-                # then retry this same mid
+                logging.warning(f"RateLimit on ID {mid}, sleeping {e.retry_after}s")
+                await asyncio.sleep(e.retry_after + 1)+                # then retry same mid
 
             except FloodWaitError as e:
-                # Telethon flood‐wait too
                 logging.warning(f"Telethon FloodWait on ID {mid}, sleeping {e.seconds}s")
                 await asyncio.sleep(e.seconds + 1)
                 # then retry
 
             except Exception as e:
-                # non‐retryable error—log and move on
                 logging.error(f"Failed to forward ID {mid}: {e!r}")
                 break
-
-        except Exception as e:
-            logging.error(f"Error on ID {mid}: {e!r}")
-            continue
 
     await status.edit_text(f"✅ Done! Processed {done}, forwarded {good} doc/video(s).")
 
