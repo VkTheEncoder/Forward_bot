@@ -63,7 +63,11 @@ async def on_forward(event):
         await event.reply(f"❌ Error: {e}")
 
 async def main():
-    await client.start()
+    # if BOT_TOKEN is set, start in bot mode
+    if BOT_TOKEN:
+        await client.start(bot_token=BOT_TOKEN)
+    else:
+        await client.start()          # falls back to user-session
     print("🔗 Bot is up!")
     await client.run_until_disconnected()
 
