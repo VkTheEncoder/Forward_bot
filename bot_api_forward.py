@@ -2,6 +2,7 @@
 import os
 import json
 import asyncio
+import pytz
 from telegram import Update, constants
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from dotenv import load_dotenv
@@ -132,8 +133,10 @@ def main():
     if not token:
         print("Error: BOT_TOKEN env var is required")
         return
-
-    app = ApplicationBuilder().token(token).build()
+    app = ApplicationBuilder() \
+        .token(token) \
+        .timezone(pytz.UTC) \
+        .build()
     app.add_handler(CommandHandler("start",    start))
     app.add_handler(CommandHandler("settings", settings_cmd))
     app.add_handler(CommandHandler("setsrc",   setsrc))
