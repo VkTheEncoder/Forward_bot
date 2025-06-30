@@ -142,31 +142,34 @@ async def forward_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for mid in range(frm, to+1):
         done += 1
         try:
-            # forward unconditionally
+            # copy without the "Forwarded from" banner
             fwd = await context.bot.copy_message(
-                chat_id=s["dst_channel"],
-                from_chat_id=s["src_channel"],
-                message_id=mid
+                chat_id      = s["dst_channel"],
+                from_chat_id = s["src_channel"],
+                message_id   = mid
             )
         except Exception:
-            # skip if no such message or no permission
             continue
+       
+        # only keep documents/videos
+        has_media = (
+            (hasattr(fwd, "document") and fwd.document) or
+            (hasattr(fwd, "video")    and fwd.video)
+        )
 
-        # check if it’s a doc or video
-        if (fwd.document is not None) or (fwd.video is not None):
+        if has_media:
             good += 1
         else:
-            # delete any unwanted forward
             await context.bot.delete_message(
-                chat_id=s["dst_channel"],
-                message_id=fwd.message_id
+                chat_id    = s["dst_channel"],
+                message_id = fwd.message_id
             )
 
         # update status every 5 or at end
         if done % 5 == 0 or done == total:
             await status.edit_text(f"🚀 Processed {done}/{total}, forwarded {good}")
 
-        # small pause to avoid rate-limits
+        # small pause to avoid rate‐limits
         await asyncio.sleep(0.1)
 
     await status.edit_text(f"✅ Done! Processed {done}, forwarded {good} doc/video(s).")
