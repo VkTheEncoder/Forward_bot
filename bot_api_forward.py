@@ -198,25 +198,33 @@ async def forward_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logging.info(f"Skipping ID {mid}: no supported media")
                 continue
 
-            # 6) copy without the “Forwarded from…” banner
-            await context.bot.copy_message(
-                chat_id      = s["dst_channel"],
-                from_chat_id = s["src_channel"],
-                message_id   = mid,
-            )
-            good += 1
+        # 6) attempt copy, retrying on rate-limit until success or fatal error
+        while True:
+            try:
+                await context.bot.copy_message(
+                    chat_id      = s["dst_channel"],
+                    from_chat_id = s["src_channel"],
+                    message_id   = mid,
+                )
+                good += 1
+                break
 
-        except FloodWaitError as e:
-            logging.warning(f"Telethon FloodWait: sleeping {e.seconds}s at ID {mid}")
-            await asyncio.sleep(e.seconds + 1)
-            done -= 1  # retry this ID
-            continue
+            except RetryAfter as e:
+                # Telegram tells us exactly how long to wait
+                logging.warning(f"Bot API RateLimit on ID {mid}, sleeping {e.retry_after}s")
+                await asyncio.sleep(e.retry_after + 1)
+                # then retry this same mid
 
-        except RetryAfter as e:
-            logging.warning(f"Bot API RateLimit: sleeping {e.retry_after}s at ID {mid}")
-            await asyncio.sleep(e.retry_after + 1)
-            done -= 1
-            continue
+            except FloodWaitError as e:
+                # Telethon flood‐wait too
+                logging.warning(f"Telethon FloodWait on ID {mid}, sleeping {e.seconds}s")
+                await asyncio.sleep(e.seconds + 1)
+                # then retry
+
+            except Exception as e:
+                # non‐retryable error—log and move on
+                logging.error(f"Failed to forward ID {mid}: {e!r}")
+                break
 
         except Exception as e:
             logging.error(f"Error on ID {mid}: {e!r}")
