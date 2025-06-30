@@ -210,7 +210,8 @@ async def forward_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             except RetryAfter as e:
                 logging.warning(f"RateLimit on ID {mid}, sleeping {e.retry_after}s")
-                await asyncio.sleep(e.retry_after + 1)+                # then retry same mid
+                await asyncio.sleep(e.retry_after + 1)
+            # then retry same mid
 
             except FloodWaitError as e:
                 logging.warning(f"Telethon FloodWait on ID {mid}, sleeping {e.seconds}s")
