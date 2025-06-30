@@ -31,8 +31,8 @@ T_API_HASH = os.getenv("API_HASH", "")
 
 # Create (or reuse) a session file called “filter.session”
 TCLIENT = TelegramClient("filter", T_API_ID, T_API_HASH)
-# On first run this will ask you for phone & code; after that it’s silent.
-asyncio.get_event_loop().run_until_complete(TCLIENT.start())
+# Connect using the existing session, no prompts
+asyncio.get_event_loop().run_until_complete(TCLIENT.connect())
 
 # ─── EDIT: load your saved session instead of interactive login ───────────────
 SESSION = os.getenv("STRING_SESSION", "")
