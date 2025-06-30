@@ -14,8 +14,7 @@ API_HASH = os.getenv("API_HASH", "")
 # session name 'forwardbot.session' will be created locally
 TCLIENT = TelegramClient('forwardbot.session', API_ID, API_HASH)
 # start Telethon sync before polling
-TCLIENT.start()
-
+TCLIENT.start(bot_token=os.getenv("BOT_TOKEN"))
 # ─── Monkey-patch tzlocal to use pytz UTC ──────────────────────────────────
 tzlocal.get_localzone = lambda: pytz.UTC
 
