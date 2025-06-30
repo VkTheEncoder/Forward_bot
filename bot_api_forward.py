@@ -2,9 +2,12 @@
 import os
 import json
 import asyncio
-import pytz, tzlocal
-# Force tzlocal to return a pytz timezone, not zoneinfo
+import pytz
+import tzlocal
+
+# Monkey-patch tzlocal to return a pytz timezone (UTC)
 tzlocal.get_localzone = lambda: pytz.UTC
+
 from telegram import Update, constants
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from dotenv import load_dotenv
