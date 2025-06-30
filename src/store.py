@@ -1,38 +1,47 @@
+# src/store.py
 import os
 import json
+from logger import logger    # ← make sure you’ve got logger available
 
-# Default settings template
+# Default template
 _defaults = {
     "src_channel": None,
     "dst_channel": None,
-    "from_id": None,
-    "to_id": None
+    "from_id":    None,
+    "to_id":      None
 }
 
-# Path ../settings.json (one level above src/)
+# Compute the file path
 SETTINGS_FILE = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '..', 'settings.json')
+    os.path.join(os.path.dirname(__file__), "..", "settings.json")
 )
 
+logger.info(f"[store] SETTINGS_FILE = {SETTINGS_FILE}")
+
 def load_settings():
-    # If it doesn't exist yet, write the defaults
+    logger.info(f"[store] load_settings() called")
     if not os.path.exists(SETTINGS_FILE):
+        logger.info("[store] settings.json not found, writing defaults")
         save_settings(_defaults)
         return _defaults.copy()
 
-    with open(SETTINGS_FILE, 'r') as f:
+    with open(SETTINGS_FILE, "r") as f:
         try:
             data = json.load(f)
+            logger.info(f"[store] read data = {data}")
         except json.JSONDecodeError:
+            logger.warning("[store] JSON decode error, resetting to defaults")
             data = {}
 
-    # ensure all keys exist
+    # Ensure all keys
     for k, v in _defaults.items():
         data.setdefault(k, v)
+    logger.info(f"[store] returning merged data = {data}")
     return data
 
 def save_settings(settings):
-    # Ensure the directory exists
+    logger.info(f"[store] save_settings() called with {settings}")
     os.makedirs(os.path.dirname(SETTINGS_FILE), exist_ok=True)
-    with open(SETTINGS_FILE, 'w') as f:
+    with open(SETTINGS_FILE, "w") as f:
         json.dump(settings, f, indent=2)
+    logger.info("[store] write complete")
