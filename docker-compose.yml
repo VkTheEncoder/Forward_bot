@@ -1,0 +1,8 @@
+version: '3.8'
+services:
+  forward-bot:
+    build: .
+    container_name: telegram-forward-bot
+    env_file:
+      - .env
+    restart: unless-stopped
