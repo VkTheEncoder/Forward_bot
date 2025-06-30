@@ -79,6 +79,7 @@ async def check_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("✅ All settings configured.")
 
+# Register command handlers
 for cmd, handler in (
     ("setsrc", set_src), ("setdst", set_dst),
     ("setfrom", set_from), ("setto", set_to),
@@ -96,19 +97,23 @@ async def forward_event(event):
 
 # ─── Main Entrypoint ───────────────────────────────────────────────────────
 async def main():
-    # Start both clients
+    # Start Telethon
     await TCLIENT.start(bot_token=BOT_TOKEN)
 
-    # Launch PTB polling as a background task
-    polling = asyncio.create_task(
-        app.run_polling(close_loop=False)
-    )
+    # Initialize and start PTB
+    await app.initialize()
+    await app.start()
 
-    # Keep Telethon running
-    await TCLIENT.run_until_disconnected()
+    # Start polling in background
+    polling_task = asyncio.create_task(app.updater.start_polling())
 
-    # If Telethon disconnects, cancel polling
-    polling.cancel()
+    # Keep Telethon running; when it disconnects, shutdown PTB
+    try:
+        await TCLIENT.run_until_disconnected()
+    finally:
+        polling_task.cancel()
+        await app.updater.stop_polling()
+        await app.shutdown()
 
 if __name__ == "__main__":
     asyncio.run(main())
