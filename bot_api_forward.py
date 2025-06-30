@@ -6,10 +6,20 @@ import os, json, asyncio, pytz, tzlocal
 from telegram import constants, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-# ─── Monkey-patch tzlocal to use pytz UTC ─────────────────────────────────────
+# ─── Telethon client setup ───────────────────────────────────────────────────
+from telethon import TelegramClient
+
+API_ID   = int(os.getenv("TELETHON_API_ID", 0))
+API_HASH = os.getenv("TELETHON_API_HASH", "")
+# session name 'forwardbot.session' will be created locally
+TCLIENT = TelegramClient('forwardbot.session', API_ID, API_HASH)
+# start Telethon sync before polling
+TCLIENT.start()
+
+# ─── Monkey-patch tzlocal to use pytz UTC ──────────────────────────────────
 tzlocal.get_localzone = lambda: pytz.UTC
 
-# ─── File where we store *all* users’ settings ────────────────────────────────
+# ─── File where we store *all* users’ settings ──────────────────────────────
 SETTINGS_FILE = os.path.join(os.path.dirname(__file__), "settings.json")
 
 # Template for one user’s settings
@@ -41,7 +51,7 @@ def set_user_settings(user_id: int, user_s: dict):
     all_s[str(user_id)] = user_s
     save_all_settings(all_s)
 
-# ─── Handlers ────────────────────────────────────────────────────────────────
+# ─── Handlers ──────────────────────────────────────────────────────────────
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -99,8 +109,7 @@ async def setdst(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def setrange(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
-    if (len(context.args)!=2
-        or not all(arg.isdigit() for arg in context.args)):
+    if (len(context.args)!=2 or not all(arg.isdigit() for arg in context.args)):
         return await update.message.reply_text(
             "Usage: <code>/setrange &lt;from_id&gt; &lt;to_id&gt;</code>",
             parse_mode=constants.ParseMode.HTML
@@ -132,8 +141,8 @@ async def forward_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     frm, to = s["from_id"], s["to_id"]
     total   = to - frm + 1
-    done    = 0       # processed so far
-    good    = 0       # forwarded docs/videos
+    done    = 0
+    good    = 0
 
     status = await update.message.reply_text(
         f"🚀 Processing 0/{total}, forwarded 0"
@@ -141,36 +150,33 @@ async def forward_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     for mid in range(frm, to+1):
         done += 1
-        # copy without the “Forwarded from” banner
+
+        # 1) fetch the original via Telethon
+        orig_list = await TCLIENT.get_messages(s["src_channel"], ids=mid)
+        if not orig_list:
+            continue
+        orig = orig_list[0]
+
+        # 2) skip anything that isn't a document or video
+        if not (orig.document or orig.video):
+            continue
+
+        # 3) copy without the “forwarded from” banner
         try:
-            fwd = await context.bot.copy_message(
+            await context.bot.copy_message(
                 chat_id      = s["dst_channel"],
                 from_chat_id = s["src_channel"],
                 message_id   = mid,
             )
+            good += 1
         except Exception:
-            # skip non-existent messages or permission errors
             continue
 
-        # only keep docs or videos
-        has_media = (
-            (hasattr(fwd, "document") and fwd.document) or
-            (hasattr(fwd, "video")    and fwd.video)
-        )
-
-        if has_media:
-            good += 1
-        else:
-            await context.bot.delete_message(
-                chat_id    = s["dst_channel"],
-                message_id = fwd.message_id,
-            )
-
-        # update progress every 5 or at the end
+        # 4) update progress every 5 or at the end
         if done % 5 == 0 or done == total:
             await status.edit_text(f"🚀 Processed {done}/{total}, forwarded {good}")
 
-        # small pause to avoid rate-limits
+        # 5) small pause to avoid rate‐limits
         await asyncio.sleep(0.1)
 
     await status.edit_text(f"✅ Done! Processed {done}, forwarded {good} doc/video(s).")
