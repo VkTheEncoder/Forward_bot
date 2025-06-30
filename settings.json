@@ -1,0 +1,10 @@
+
+
+#### settings.json
+
+{
+  "src_channel": null,
+  "dst_channel": null,
+  "from_id": null,
+  "to_id": null
+}
