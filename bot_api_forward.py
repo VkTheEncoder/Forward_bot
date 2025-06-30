@@ -43,7 +43,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "`/setdst <chat_id>`\n"
         "`/setrange <from_id> <to_id>`\n"
         "Then `/forward` to begin.",
-        parse_mode=constants.ParseMode.MARKDOWN
+        parse_mode=constants.ParseMode.HTML
     )
 
 async def settings_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -55,54 +55,54 @@ async def settings_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"- Range: `{s['from_id']} → {s['to_id']}`\n\n"
         "Use `/setsrc`, `/setdst`, `/setrange` to update."
     )
-    await update.message.reply_text(text, parse_mode=constants.ParseMode.MARKDOWN)
+    await update.message.reply_text(text, parse_mode=constants.ParseMode.HTML)
 
 async def setsrc(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(context.args) != 1 or not context.args[0].lstrip("-").isdigit():
         return await update.message.reply_text(
             "Usage: `/setsrc <numeric_chat_id>`",
-            parse_mode=constants.ParseMode.MARKDOWN
+            parse_mode=constants.ParseMode.HTML
         )
     s = load_settings()
     s["src_channel"] = int(context.args[0])
     save_settings(s)
     await update.message.reply_text(
         f"✅ Source chat_id set to `{s['src_channel']}`",
-        parse_mode=constants.ParseMode.MARKDOWN
+        parse_mode=constants.ParseMode.HTML
     )
 
 async def setdst(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(context.args) != 1 or not context.args[0].lstrip("-").isdigit():
         return await update.message.reply_text(
             "Usage: `/setdst <numeric_chat_id>`",
-            parse_mode=constants.ParseMode.MARKDOWN
+            parse_mode=constants.ParseMode.HTML
         )
     s = load_settings()
     s["dst_channel"] = int(context.args[0])
     save_settings(s)
     await update.message.reply_text(
         f"✅ Destination chat_id set to `{s['dst_channel']}`",
-        parse_mode=constants.ParseMode.MARKDOWN
+        parse_mode=constants.ParseMode.HTML
     )
 
 async def setrange(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(context.args) != 2 or not all(arg.isdigit() for arg in context.args):
         return await update.message.reply_text(
             "Usage: `/setrange <from_id> <to_id>`",
-            parse_mode=constants.ParseMode.MARKDOWN
+            parse_mode=constants.ParseMode.HTML
         )
     frm, to = map(int, context.args)
     if frm > to:
         return await update.message.reply_text(
             "⚠️ `from_id` must be ≤ `to_id`.",
-            parse_mode=constants.ParseMode.MARKDOWN
+            parse_mode=constants.ParseMode.HTML
         )
     s = load_settings()
     s["from_id"], s["to_id"] = frm, to
     save_settings(s)
     await update.message.reply_text(
         f"✅ Range set: `{frm}` → `{to}`",
-        parse_mode=constants.ParseMode.MARKDOWN
+        parse_mode=constants.ParseMode.HTML
     )
 
 async def forward_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -110,7 +110,7 @@ async def forward_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not all([s["src_channel"], s["dst_channel"], s["from_id"], s["to_id"]]):
         return await update.message.reply_text(
             "⚠️ Please configure all settings first with `/settings`.",
-            parse_mode=constants.ParseMode.MARKDOWN
+            parse_mode=constants.ParseMode.HTML
         )
 
     total = s["to_id"] - s["from_id"] + 1
