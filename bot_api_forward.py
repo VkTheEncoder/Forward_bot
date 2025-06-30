@@ -152,7 +152,7 @@ async def forward_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         done += 1
 
         # 1) fetch the original via Telethon
-        orig_list = await TCLIENT.get_messages(s["src_channel"], ids=mid)
+        orig_list = await TCLIENT.get_messages(s["src_channel"], ids=[mid])
         if not orig_list:
             continue
         orig = orig_list[0]
