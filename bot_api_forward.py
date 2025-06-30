@@ -24,6 +24,7 @@ API_HASH = os.getenv("API_HASH", "")
 TCLIENT = TelegramClient('forwardbot.session', API_ID, API_HASH)
 # start Telethon sync before polling
 TCLIENT.start(bot_token=os.getenv("BOT_TOKEN"))
+
 # ─── Monkey-patch tzlocal to use pytz UTC ──────────────────────────────────
 tzlocal.get_localzone = lambda: pytz.UTC
 
@@ -84,7 +85,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode=constants.ParseMode.HTML
     )
 
-
 async def settings_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
     s   = get_user_settings(uid)
@@ -98,7 +98,7 @@ async def settings_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def setsrc(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
-    if len(context.args)!=1 or not context.args[0].lstrip("-").isdigit():
+    if len(context.args) != 1 or not context.args[0].lstrip("-").isdigit():
         return await update.message.reply_text(
             "Usage: <code>/setsrc &lt;numeric_chat_id&gt;</code>",
             parse_mode=constants.ParseMode.HTML
@@ -113,7 +113,7 @@ async def setsrc(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def setdst(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
-    if len(context.args)!=1 or not context.args[0].lstrip("-").isdigit():
+    if len(context.args) != 1 or not context.args[0].lstrip("-").isdigit():
         return await update.message.reply_text(
             "Usage: <code>/setdst &lt;numeric_chat_id&gt;</code>",
             parse_mode=constants.ParseMode.HTML
@@ -128,7 +128,7 @@ async def setdst(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def setrange(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
-    if (len(context.args)!=2 or not all(arg.isdigit() for arg in context.args)):
+    if len(context.args) != 2 or not all(arg.isdigit() for arg in context.args):
         return await update.message.reply_text(
             "Usage: <code>/setrange &lt;from_id&gt; &lt;to_id&gt;</code>",
             parse_mode=constants.ParseMode.HTML
@@ -167,60 +167,60 @@ async def forward_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🚀 Processing 0/{total}, forwarded 0"
     )
 
-       for mid in range(frm, to+1):
-            done += 1
+    for mid in range(frm, to + 1):
+        done += 1
 
-            # 1) back off every 10 messages
-            if done % 10 == 0:
-                await asyncio.sleep(5)
+        # 1) back off every 10 messages
+        if done % 10 == 0:
+            await asyncio.sleep(5)
 
-            # 2) update status asap
-            await status.edit_text(f"🚀 Processed {done}/{total}, forwarded {good}")
+        # 2) update status asap
+        await status.edit_text(f"🚀 Processed {done}/{total}, forwarded {good}")
 
-            # 3) small throttle
-            await asyncio.sleep(0.1)
+        # 3) small throttle
+        await asyncio.sleep(0.1)
 
-            try:
-                # 4) fetch via Telethon (always as list)
-                orig_list = await TCLIENT.get_messages(s["src_channel"], ids=[mid])
-                orig = orig_list[0] if orig_list else None
+        try:
+            # 4) fetch via Telethon (always as list)
+            orig_list = await TCLIENT.get_messages(s["src_channel"], ids=[mid])
+            orig = orig_list[0] if orig_list else None
 
             # 5) skip if not a document/video/animation/video_note
-                if not (
-                    orig
-                    and (
-                        orig.document
-                        or orig.video
-                        or getattr(orig, "animation", None)
-                        or getattr(orig, "video_note", None)
-                    )
-                ):
-                    logging.info(f"Skipping ID {mid}: no supported media")
-                    continue
-
-                # 6) copy without the “Forwarded from…” banner
-                await context.bot.copy_message(
-                    chat_id      = s["dst_channel"],
-                    from_chat_id = s["src_channel"],
-                    message_id   = mid,
+            if not (
+                orig
+                and (
+                    orig.document
+                    or orig.video
+                    or getattr(orig, "animation", None)
+                    or getattr(orig, "video_note", None)
                 )
-                good += 1
-
-            except FloodWaitError as e:
-                logging.warning(f"Telethon FloodWait: sleeping {e.seconds}s at ID {mid}")
-                await asyncio.sleep(e.seconds + 1)
-                done -= 1  # retry this ID
+            ):
+                logging.info(f"Skipping ID {mid}: no supported media")
                 continue
 
-            except RetryAfter as e:
-                logging.warning(f"Bot API RateLimit: sleeping {e.retry_after}s at ID {mid}")
-                await asyncio.sleep(e.retry_after + 1)
-                done -= 1
-                continue
-    
-            except Exception as e:
-                logging.error(f"Error on ID {mid}: {e!r}")
-                continue
+            # 6) copy without the “Forwarded from…” banner
+            await context.bot.copy_message(
+                chat_id      = s["dst_channel"],
+                from_chat_id = s["src_channel"],
+                message_id   = mid,
+            )
+            good += 1
+
+        except FloodWaitError as e:
+            logging.warning(f"Telethon FloodWait: sleeping {e.seconds}s at ID {mid}")
+            await asyncio.sleep(e.seconds + 1)
+            done -= 1  # retry this ID
+            continue
+
+        except RetryAfter as e:
+            logging.warning(f"Bot API RateLimit: sleeping {e.retry_after}s at ID {mid}")
+            await asyncio.sleep(e.retry_after + 1)
+            done -= 1
+            continue
+
+        except Exception as e:
+            logging.error(f"Error on ID {mid}: {e!r}")
+            continue
 
     await status.edit_text(f"✅ Done! Processed {done}, forwarded {good} doc/video(s).")
 
