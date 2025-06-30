@@ -1,6 +1,6 @@
 import asyncio
 from telethon import TelegramClient, events
-from config import API_ID, API_HASH
+from config import API_ID, API_HASH, BOT_TOKEN
 from store import load_settings, save_settings
 from forwarder import forward_range
 from logger import logger
