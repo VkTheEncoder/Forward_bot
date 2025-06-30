@@ -4,6 +4,8 @@ import json
 import asyncio
 from telegram import Update, constants
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from dotenv import load_dotenv
+load_dotenv()
 
 # Path to settings.json
 SETTINGS_FILE = os.path.join(os.path.dirname(__file__), "settings.json")
