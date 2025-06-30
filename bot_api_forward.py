@@ -143,14 +143,14 @@ async def forward_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for mid in range(frm, to+1):
         done += 1
         try:
-            # forward unconditionally
-            fwd = await context.bot.forward_message(
+            # COPY instead of forward → no "Forwarded from" header
+            fwd = await context.bot.copy_message(
                 chat_id=s["dst_channel"],
                 from_chat_id=s["src_channel"],
                 message_id=mid
             )
         except Exception:
-            # skip if no such message or no permission
+            # skip missing msg or lack of permission
             continue
 
         # check if it’s a doc or video
