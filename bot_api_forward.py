@@ -54,27 +54,27 @@ def set_user_settings(user_id: int, user_s: dict):
 # ─── Handlers ──────────────────────────────────────────────────────────────
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-await update.message.reply_text(
-    "🤖 <b>Advance ForwardBot</b>!\n\n"
-    "I’ll help you forward documents & videos from one channel to another.\n\n"
-    "<b>How to use</b>:\n"
-    "1️⃣ <code>/setsrc &lt;chat_id&gt;</code>\n"
-    "   • Choose the source channel (where I’ll pull messages from).\n\n"
-    "2️⃣ <code>/setdst &lt;chat_id&gt;</code>\n"
-    "   • Choose the destination channel (where I’ll copy messages to).\n\n"
-    "3️⃣ <code>/setrange &lt;from_id&gt; &lt;to_id&gt;</code>\n"
-    "   • Specify the message ID range you want to forward (e.g. 100 to 200).\n\n"
-    "4️⃣ <code>/forward</code>\n"
-    "   • I’ll process every ID in your range, copy only documents & videos, and skip everything else.\n\n"
-    "<b>Example</b>:\n"
-    "<code>/setsrc -1276473254378</code>  – set your source channel\n"
-    "<code>/setdst -78124723t4237</code>  – set your destination channel\n"
-    "<code>/setrange 50 150</code>        – forward messages 50 through 150\n"
-    "<code>/forward</code>                – start copying docs/videos\n\n"
-    "⚙️ Need to check your settings? Use <code>/settings</code>\n"
-    "<b>❓ Contact @THe_vK_3 if any problem or Query</b>",
-    parse_mode=constants.ParseMode.HTML
-)
+    await update.message.reply_text(
+        "🤖 <b>Advance ForwardBot</b>!\n\n"
+        "I’ll help you forward documents & videos from one channel to another.\n\n"
+        "<b>How to use</b>:\n"
+        "1️⃣ <code>/setsrc &lt;chat_id&gt;</code>\n"
+        "   • Choose the source channel (where I’ll pull messages from).\n\n"
+        "2️⃣ <code>/setdst &lt;chat_id&gt;</code>\n"
+        "   • Choose the destination channel (where I’ll copy messages to).\n\n"
+        "3️⃣ <code>/setrange &lt;from_id&gt; &lt;to_id&gt;</code>\n"
+        "   • Specify the message ID range you want to forward (e.g. 100 to 200).\n\n"
+        "4️⃣ <code>/forward</code>\n"
+        "   • I’ll process every ID in your range, copy only documents & videos, and skip everything else.\n\n"
+        "<b>Example</b>:\n"
+        "<code>/setsrc -1276473254378</code>  – set your source channel\n"
+        "<code>/setdst -78124723t4237</code>  – set your destination channel\n"
+        "<code>/setrange 50 150</code>        – forward messages 50 through 150\n"
+        "<code>/forward</code>                – start copying docs/videos\n\n"
+        "⚙️ Need to check your settings? Use <code>/settings</code>\n"
+        "<b>❓ Contact @THe_vK_3 if any problem or Query</b>",
+        parse_mode=constants.ParseMode.HTML
+    )
 
 
 async def settings_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
