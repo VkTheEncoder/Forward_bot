@@ -1,146 +1,185 @@
 #!/usr/bin/env python3
-import os
-import json
-import asyncio
-import pytz
-import tzlocal
-
-# Monkey-patch tzlocal to return a pytz timezone (UTC)
-tzlocal.get_localzone = lambda: pytz.UTC
-
-from telegram import Update, constants
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from dotenv import load_dotenv
 load_dotenv()
 
-# Path to settings.json
+import os, json, asyncio, pytz, tzlocal
+from telegram import constants, Update
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+
+# ─── Monkey-patch tzlocal to use pytz UTC ─────────────────────────────────────
+tzlocal.get_localzone = lambda: pytz.UTC
+
+# ─── File where we store *all* users’ settings ────────────────────────────────
 SETTINGS_FILE = os.path.join(os.path.dirname(__file__), "settings.json")
 
-# Default settings template
-DEFAULTS = {
+# Template for one user’s settings
+USER_DEFAULTS = {
     "src_channel": None,    # numeric chat_id, e.g. -1001234567890
     "dst_channel": None,    # numeric chat_id
-    "from_id":    None,     # integer message_id
-    "to_id":      None,     # integer message_id
+    "from_id":    None,     # integer
+    "to_id":      None,     # integer
 }
 
-def load_settings():
+def load_all_settings():
     if not os.path.exists(SETTINGS_FILE):
-        save_settings(DEFAULTS)
-        return DEFAULTS.copy()
+        with open(SETTINGS_FILE, "w") as f:
+            json.dump({}, f, indent=2)
+        return {}
     with open(SETTINGS_FILE, "r") as f:
         return json.load(f)
 
-def save_settings(settings):
+def save_all_settings(all_settings):
     with open(SETTINGS_FILE, "w") as f:
-        json.dump(settings, f, indent=2)
+        json.dump(all_settings, f, indent=2)
+
+def get_user_settings(user_id: int):
+    all_s = load_all_settings()
+    return all_s.get(str(user_id), USER_DEFAULTS.copy())
+
+def set_user_settings(user_id: int, user_s: dict):
+    all_s = load_all_settings()
+    all_s[str(user_id)] = user_s
+    save_all_settings(all_s)
+
+# ─── Handlers ────────────────────────────────────────────────────────────────
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "🤖 *ForwardBot* ready!\n\n"
-        "Use /settings to view or update:\n"
-        "`/setsrc <chat_id>`\n"
-        "`/setdst <chat_id>`\n"
-        "`/setrange <from_id> <to_id>`\n"
-        "Then `/forward` to begin.",
+        "🤖 <b>ForwardBot</b> ready!\n\n"
+        "Each user has their own settings.\n\n"
+        "<b>/settings</b> — View your current config\n"
+        "<b>/setsrc</b> &lt;chat_id&gt;\n"
+        "<b>/setdst</b> &lt;chat_id&gt;\n"
+        "<b>/setrange</b> &lt;from_id&gt; &lt;to_id&gt;\n"
+        "Then <b>/forward</b> to start.\n\n"
+        "Only documents & videos will be forwarded.",
         parse_mode=constants.ParseMode.HTML
     )
 
 async def settings_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    s = load_settings()
-    text = (
-        "*Current Settings*\n"
-        f"- Source chat_id: `{s['src_channel']}`\n"
-        f"- Destination chat_id: `{s['dst_channel']}`\n"
-        f"- Range: `{s['from_id']} → {s['to_id']}`\n\n"
-        "Use `/setsrc`, `/setdst`, `/setrange` to update."
+    uid = update.effective_user.id
+    s   = get_user_settings(uid)
+    await update.message.reply_text(
+        "<b>Your Settings</b>\n"
+        f"• Source chat_id: <code>{s['src_channel']}</code>\n"
+        f"• Destination chat_id: <code>{s['dst_channel']}</code>\n"
+        f"• Range: <code>{s['from_id']} → {s['to_id']}</code>",
+        parse_mode=constants.ParseMode.HTML
     )
-    await update.message.reply_text(text, parse_mode=constants.ParseMode.HTML)
 
 async def setsrc(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if len(context.args) != 1 or not context.args[0].lstrip("-").isdigit():
+    uid = update.effective_user.id
+    if len(context.args)!=1 or not context.args[0].lstrip("-").isdigit():
         return await update.message.reply_text(
-            "Usage: `/setsrc <numeric_chat_id>`",
+            "Usage: <code>/setsrc &lt;numeric_chat_id&gt;</code>",
             parse_mode=constants.ParseMode.HTML
         )
-    s = load_settings()
+    s = get_user_settings(uid)
     s["src_channel"] = int(context.args[0])
-    save_settings(s)
+    set_user_settings(uid, s)
     await update.message.reply_text(
-        f"✅ Source chat_id set to `{s['src_channel']}`",
+        f"✅ Source chat_id set to <code>{s['src_channel']}</code>",
         parse_mode=constants.ParseMode.HTML
     )
 
 async def setdst(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if len(context.args) != 1 or not context.args[0].lstrip("-").isdigit():
+    uid = update.effective_user.id
+    if len(context.args)!=1 or not context.args[0].lstrip("-").isdigit():
         return await update.message.reply_text(
-            "Usage: `/setdst <numeric_chat_id>`",
+            "Usage: <code>/setdst &lt;numeric_chat_id&gt;</code>",
             parse_mode=constants.ParseMode.HTML
         )
-    s = load_settings()
+    s = get_user_settings(uid)
     s["dst_channel"] = int(context.args[0])
-    save_settings(s)
+    set_user_settings(uid, s)
     await update.message.reply_text(
-        f"✅ Destination chat_id set to `{s['dst_channel']}`",
+        f"✅ Destination chat_id set to <code>{s['dst_channel']}</code>",
         parse_mode=constants.ParseMode.HTML
     )
 
 async def setrange(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if len(context.args) != 2 or not all(arg.isdigit() for arg in context.args):
+    uid = update.effective_user.id
+    if (len(context.args)!=2
+        or not all(arg.isdigit() for arg in context.args)):
         return await update.message.reply_text(
-            "Usage: `/setrange <from_id> <to_id>`",
+            "Usage: <code>/setrange &lt;from_id&gt; &lt;to_id&gt;</code>",
             parse_mode=constants.ParseMode.HTML
         )
     frm, to = map(int, context.args)
     if frm > to:
         return await update.message.reply_text(
-            "⚠️ `from_id` must be ≤ `to_id`.",
+            "⚠️ <code>from_id</code> must be ≤ <code>to_id</code>.",
             parse_mode=constants.ParseMode.HTML
         )
-    s = load_settings()
+    s = get_user_settings(uid)
     s["from_id"], s["to_id"] = frm, to
-    save_settings(s)
+    set_user_settings(uid, s)
     await update.message.reply_text(
-        f"✅ Range set: `{frm}` → `{to}`",
+        f"✅ Range set: <code>{frm} → {to}</code>",
         parse_mode=constants.ParseMode.HTML
     )
 
 async def forward_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    s = load_settings()
+    uid = update.effective_user.id
+    s   = get_user_settings(uid)
+
+    # ensure config complete
     if not all([s["src_channel"], s["dst_channel"], s["from_id"], s["to_id"]]):
         return await update.message.reply_text(
-            "⚠️ Please configure all settings first with `/settings`.",
+            "⚠️ Your settings are incomplete. Use <b>/settings</b> to check.",
             parse_mode=constants.ParseMode.HTML
         )
 
-    total = s["to_id"] - s["from_id"] + 1
-    done = 0
-    prog = await update.message.reply_text(f"🚀 Forwarding 0 / {total}")
+    frm, to = s["from_id"], s["to_id"]
+    total   = to - frm + 1
+    done    = 0       # processed so far
+    good    = 0       # forwarded docs/videos
 
-    for mid in range(s["from_id"], s["to_id"] + 1):
+    status = await update.message.reply_text(
+        f"🚀 Processing 0/{total}, forwarded 0"
+    )
+
+    for mid in range(frm, to+1):
+        done += 1
         try:
-            await context.bot.forward_message(
+            # forward unconditionally
+            fwd = await context.bot.forward_message(
                 chat_id=s["dst_channel"],
                 from_chat_id=s["src_channel"],
-                message_id=mid,
+                message_id=mid
             )
-        except:
-            pass
-        done += 1
+        except Exception:
+            # skip if no such message or no permission
+            continue
+
+        # check if it’s a doc or video
+        if (fwd.document is not None) or (fwd.video is not None):
+            good += 1
+        else:
+            # delete any unwanted forward
+            await context.bot.delete_message(
+                chat_id=s["dst_channel"],
+                message_id=fwd.message_id
+            )
+
+        # update status every 5 or at end
         if done % 5 == 0 or done == total:
-            await prog.edit_text(f"🚀 Forwarding {done} / {total}")
+            await status.edit_text(f"🚀 Processed {done}/{total}, forwarded {good}")
+
+        # small pause to avoid rate-limits
         await asyncio.sleep(0.1)
 
-    await prog.edit_text(f"✅ Done! Forwarded {done} messages.")
+    await status.edit_text(f"✅ Done! Processed {done}, forwarded {good} doc/video(s).")
+
+# ─── Application setup ────────────────────────────────────────────────────────
 
 def main():
     token = os.getenv("BOT_TOKEN")
     if not token:
-        print("Error: BOT_TOKEN env var is required")
+        print("Error: BOT_TOKEN env var required")
         return
-    app = ApplicationBuilder() \
-        .token(token) \
-        .build()
+
+    app = ApplicationBuilder().token(token).build()
     app.add_handler(CommandHandler("start",    start))
     app.add_handler(CommandHandler("settings", settings_cmd))
     app.add_handler(CommandHandler("setsrc",   setsrc))
@@ -148,7 +187,7 @@ def main():
     app.add_handler(CommandHandler("setrange", setrange))
     app.add_handler(CommandHandler("forward",  forward_cmd))
 
-    print("🔗 Bot-API forwarder is up!")
+    print("🔗 Multi-user forwarder is up!")
     app.run_polling()
 
 if __name__ == "__main__":
