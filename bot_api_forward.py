@@ -161,33 +161,36 @@ async def forward_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for mid in range(frm, to+1):
         done += 1
 
-        # 1) fetch the original via Telethon
-        orig_list = await TCLIENT.get_messages(s["src_channel"], ids=[mid])
-        if not orig_list:
-            continue
-        orig = orig_list[0]
-
-        # 2) skip anything that isn't a document or video
-        if not (orig.document or orig.video):
-            continue
-
-        # 3) copy without the “forwarded from” banner
-        try:
-            await context.bot.copy_message(
-                chat_id      = s["dst_channel"],
-                from_chat_id = s["src_channel"],
-                message_id   = mid,
-            )
-            good += 1
-        except Exception:
-            continue
-
-        # 4) update progress every 5 or at the end
-        if done % 5 == 0 or done == total:
-            await status.edit_text(f"🚀 Processed {done}/{total}, forwarded {good}")
-
-        # 5) small pause to avoid rate‐limits
-        await asyncio.sleep(0.1)
++        try:
++            # fetch the original message as a one-element list
++            orig_list = await TCLIENT.get_messages(s["src_channel"], ids=[mid])
++            orig = orig_list[0] if orig_list else None
++
++            # skip if missing or not a doc/video
++            if not orig or not (orig.document or orig.video):
++                continue
++
++            # copy it without the “forwarded from…” banner
++            await context.bot.copy_message(
++                chat_id      = s["dst_channel"],
++                from_chat_id = s["src_channel"],
++                message_id   = mid,
++            )
++            good += 1
++
++        except Exception:
++            # ignore any single‐message error
++            continue
++
++        # every 10 messages, take a 5 s breather
++        if done % 10 == 0:
++            await asyncio.sleep(5)
++
++        # update status on every iteration
++        await status.edit_text(f"🚀 Processed {done}/{total}, forwarded {good}")
++
++        # small throttle to avoid hitting limits
++        await asyncio.sleep(0.1)
 
     await status.edit_text(f"✅ Done! Processed {done}, forwarded {good} doc/video(s).")
 
