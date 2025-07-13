@@ -74,6 +74,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "   • Choose the destination channel (where I’ll copy messages to).\n\n"
         "3️⃣ <code>/setrange &lt;from_id&gt; &lt;to_id&gt;</code>\n"
         "   • Specify the message ID range you want to forward (e.g. 100 to 200).\n\n"
+        "4️⃣ <code>/Foption</code>\n"
+        "   • Toggle whether to forward with the “Forwarded from…” header or without it.\n\n"
         "4️⃣ <code>/forward</code>\n"
         "   • I’ll process every ID in your range, copy only documents & videos, and skip everything else.\n\n"
         "<b>Example</b>:\n"
