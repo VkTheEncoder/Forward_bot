@@ -76,7 +76,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "   • Specify the message ID range you want to forward (e.g. 100 to 200).\n\n"
         "4️⃣ <code>/foption</code>\n"
         "   • Toggle whether to forward with the “Forwarded from…” header or without it.\n\n"
-        "4️⃣ <code>/forward</code>\n"
+        "5️⃣ <code>/forward</code>\n"
         "   • I’ll process every ID in your range, copy only documents & videos, and skip everything else.\n\n"
         "<b>Example</b>:\n"
         "<code>/setsrc -1276473254378</code>  \n"
