@@ -37,6 +37,7 @@ USER_DEFAULTS = {
     "dst_channel": None,    # numeric chat_id
     "from_id":    None,     # integer
     "to_id":      None,     # integer
+    "forward":    False,     # ← new flag: False = copy, True = forward
 }
 
 def load_all_settings():
@@ -147,6 +148,34 @@ async def setrange(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode=constants.ParseMode.HTML
     )
 
+
+async def foption_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    kb = [
+      [
+        InlineKeyboardButton("Yes (show header)", callback_data="fopt_yes"),
+        InlineKeyboardButton("No (hide header)",   callback_data="fopt_no"),
+      ]
+    ]
+    await update.message.reply_text(
+        "🔀 Do you want to **forward** with a header or **copy** without it?",
+        reply_markup=InlineKeyboardMarkup(kb),
+        parse_mode=constants.ParseMode.MARKDOWN,
+    )
+
+async def foption_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    uid = query.from_user.id
+    s = get_user_settings(uid)
+    if query.data == "fopt_yes":
+        s["forward"] = True
+        text = "✅ Will **forward** messages (with header)."
+    else:
+        s["forward"] = False
+        text = "✅ Will **copy** messages (no header)."
+    set_user_settings(uid, s)
+    await query.edit_message_text(text, parse_mode=constants.ParseMode.MARKDOWN)
+
 async def forward_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
     s   = get_user_settings(uid)
@@ -200,11 +229,18 @@ async def forward_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # 6) attempt copy, retrying on rate-limit until success or fatal error
         while True:
             try:
-                await context.bot.copy_message(
-                    chat_id      = s["dst_channel"],
-                    from_chat_id = s["src_channel"],
-                    message_id   = mid,
-                )
+                if s.get("forward"):
+                    await context.bot.forward_message(
+                        chat_id      = s["dst_channel"],
+                        from_chat_id = s["src_channel"],
+                        message_id   = mid,
+                    )
+                else:
+                    await context.bot.copy_message(
+                        chat_id      = s["dst_channel"],
+                        from_chat_id = s["src_channel"],
+                        message_id   = mid,
+                    )
                 good += 1
                 break
 
@@ -238,6 +274,8 @@ def main():
     app.add_handler(CommandHandler("setsrc",   setsrc))
     app.add_handler(CommandHandler("setdst",   setdst))
     app.add_handler(CommandHandler("setrange", setrange))
+    app.add_handler(CommandHandler("Foption",   foption_cmd))
+    app.add_handler(CallbackQueryHandler(foption_callback, pattern="^fopt_"))
     app.add_handler(CommandHandler("forward",  forward_cmd))
 
     print("🔗 Multi-user forwarder is up!")
